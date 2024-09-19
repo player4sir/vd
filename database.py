@@ -18,7 +18,7 @@ async def init_db():
         await conn.execute('''
             CREATE TABLE IF NOT EXISTS activation_codes (
                 code TEXT PRIMARY KEY,
-                app_id TEXT NOT NULL,
+                app_id TEXT,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                 expires_at TIMESTAMP WITH TIME ZONE,
                 max_uses INTEGER,
@@ -27,7 +27,7 @@ async def init_db():
             )
         ''')
 
-async def save_activation_code(code: str, app_id: str, expires_at: datetime = None, max_uses: int = None):
+async def save_activation_code(code: str, app_id: str = None, expires_at: datetime = None, max_uses: int = None):
     pool = await get_connection()
     async with pool.acquire() as conn:
         await conn.execute(
@@ -54,7 +54,6 @@ async def get_activation_code(code: str):
     logger.debug(f"Fetch result: {result}")
     return result
 
-
 async def increment_code_usage(code: str):
     pool = await get_connection()
     async with pool.acquire() as conn:
@@ -79,6 +78,19 @@ async def revoke_activation_code(code: str):
             code
         )
 
+async def update_activation_code(code: str, app_id: str):
+    pool = await get_connection()
+    async with pool.acquire() as conn:
+        result = await conn.execute(
+            '''
+            UPDATE activation_codes
+            SET app_id = $2
+            WHERE code = $1 AND app_id IS NULL
+            ''',
+            code, app_id
+        )
+    return result != "UPDATE 0"
+
 async def bulk_generate_codes(app_id: str, count: int, expires_at: datetime = None, max_uses: int = None):
     from activation_code import generate_activation_code
     codes = [await generate_activation_code() for _ in range(count)]
@@ -92,3 +104,28 @@ async def bulk_generate_codes(app_id: str, count: int, expires_at: datetime = No
             [(code, app_id, expires_at, max_uses) for code in codes]
         )
     return codes
+
+async def get_activation_codes(limit: int = 100, offset: int = 0):
+    pool = await get_connection()
+    async with pool.acquire() as conn:
+        results = await conn.fetch(
+            '''
+            SELECT code, app_id, created_at, expires_at, max_uses, current_uses, is_revoked
+            FROM activation_codes
+            ORDER BY created_at DESC
+            LIMIT $1 OFFSET $2
+            ''',
+            limit, offset
+        )
+    return [dict(result) for result in results]
+
+async def get_app_activation_code(app_id: str):
+    pool = await get_connection()
+    async with pool.acquire() as conn:
+        return await conn.fetchrow(
+            '''
+            SELECT * FROM activation_codes
+            WHERE app_id = $1
+            ''',
+            app_id
+        )
