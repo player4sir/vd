@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from activation_code import generate_activation_code, validate_activation_code, bind_activation_code
+from activation_code import generate_activation_code, validate_activation_code, bind_activation_code, unbind_activation_code, delete_activation_code
 from database import init_db, save_activation_code, revoke_activation_code, bulk_generate_codes, get_activation_codes
 from datetime import datetime, timedelta, UTC
 from typing import List, Optional
@@ -109,6 +109,12 @@ class ActivationCodeInfo(BaseModel):
     is_revoked: bool
 
 
+class UnbindRequest(BaseModel):
+    app_id: str
+
+class DeleteCodeRequest(BaseModel):
+    activation_code: str
+
 @app.post("/generate", response_model=ActivationCodeResponse, dependencies=[Depends(verify_api_key)])
 async def generate_code(request: ActivationCodeRequest):
     if not rate_limiter.is_allowed():
@@ -180,6 +186,30 @@ async def list_activation_codes(limit: int = 100, offset: int = 0):
     
     codes = await get_activation_codes(limit, offset)
     return codes
+
+@app.post("/unbind")
+async def unbind_code(request: UnbindRequest):
+    if not rate_limiter.is_allowed():
+        raise HTTPException(status_code=429, detail="Rate limit exceeded")
+    
+    logger.debug(f"Unbinding activation code for app_id: {request.app_id}")
+    result = await unbind_activation_code(request.app_id)
+    if result["success"]:
+        return {"success": True, "message": result["message"]}
+    else:
+        raise HTTPException(status_code=400, detail=result["message"])
+
+@app.post("/delete_code", dependencies=[Depends(verify_api_key)])
+async def delete_code(request: DeleteCodeRequest):
+    if not rate_limiter.is_allowed():
+        raise HTTPException(status_code=429, detail="Rate limit exceeded")
+    
+    logger.debug(f"Deleting activation code: {request.activation_code}")
+    result = await delete_activation_code(request.activation_code)
+    if result["success"]:
+        return {"success": True, "message": result["message"]}
+    else:
+        raise HTTPException(status_code=400, detail=result["message"])
 
 if __name__ == "__main__":
     import uvicorn

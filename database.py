@@ -129,3 +129,28 @@ async def get_app_activation_code(app_id: str):
             ''',
             app_id
         )
+
+async def unbind_activation_code(app_id: str):
+    pool = await get_connection()
+    async with pool.acquire() as conn:
+        result = await conn.execute(
+            '''
+            UPDATE activation_codes
+            SET app_id = NULL
+            WHERE app_id = $1
+            ''',
+            app_id
+        )
+    return result != "UPDATE 0"
+
+async def delete_activation_code(code: str):
+    pool = await get_connection()
+    async with pool.acquire() as conn:
+        result = await conn.execute(
+            '''
+            DELETE FROM activation_codes
+            WHERE code = $1
+            ''',
+            code
+        )
+    return result != "DELETE 0"

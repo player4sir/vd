@@ -79,3 +79,21 @@ async def validate_activation_code(activation_code: str, app_id: str) -> bool:
         return True
     logger.debug("Code is invalid or app_id doesn't match")
     return False
+
+async def unbind_activation_code(app_id: str) -> dict:
+    success = await unbind_activation_code(app_id)
+    if success:
+        logger.debug(f"Activation code unbound from app_id {app_id}")
+        return {"success": True, "message": "Activation code unbound successfully"}
+    else:
+        logger.debug(f"Failed to unbind activation code for app_id {app_id}")
+        return {"success": False, "message": "Failed to unbind activation code"}
+
+async def delete_activation_code(code: str) -> dict:
+    success = await delete_activation_code(code)
+    if success:
+        logger.debug(f"Activation code {code} deleted")
+        return {"success": True, "message": "Activation code deleted successfully"}
+    else:
+        logger.debug(f"Failed to delete activation code {code}")
+        return {"success": False, "message": "Failed to delete activation code"}

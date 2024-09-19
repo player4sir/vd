@@ -59,6 +59,8 @@ API 文档可以通过访问 `http://localhost:8000/docs` 查看。
 - `POST /bulk_generate`: 批量生成激活码
 - `POST /revoke`: 撤销激活码
 - `GET /list_codes`: 获取激活码列表
+- `POST /unbind`: 解除应用的激活状态
+- `POST /delete_code`: 删除指定的激活码
 
 ### 生成激活码
 
@@ -168,6 +170,36 @@ headers = {
 response = requests.get(url, headers=headers)
 print(response.json())  
 ```
+### 解除应用的激活状态
+
+```python
+import requests
+url = "http://localhost:8000/unbind"
+headers = {
+"X-API-Key": "your_api_key_here"
+}
+data = {
+"app_id": "your_app_id_here"
+}
+response = requests.post(url, json=data, headers=headers)
+print(response.json())
+```
+
+### 删除指定的激活码
+
+```python   
+import requests
+url = "http://localhost:8000/delete_code"
+headers = {
+"X-API-Key": "your_api_key_here"
+}
+data = {
+"activation_code": "your_activation_code_here"
+}   
+response = requests.post(url, json=data, headers=headers)
+print(response.json())
+```     
+
 
 ## 注意事项
 
