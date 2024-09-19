@@ -1,6 +1,14 @@
 from datetime import UTC, datetime
 from utils import generate_checksum, generate_random_code
-from database import get_activation_code, increment_code_usage, save_activation_code, update_activation_code, get_app_activation_code
+from database import (
+    get_activation_code,
+    increment_code_usage,
+    save_activation_code,
+    update_activation_code,
+    get_app_activation_code,
+    unbind_activation_code as db_unbind_activation_code,
+    delete_activation_code as db_delete_activation_code
+)
 import logging
 
 logger = logging.getLogger(__name__)
@@ -81,7 +89,7 @@ async def validate_activation_code(activation_code: str, app_id: str) -> bool:
     return False
 
 async def unbind_activation_code(app_id: str) -> dict:
-    success = await unbind_activation_code(app_id)
+    success = await db_unbind_activation_code(app_id)
     if success:
         logger.debug(f"Activation code unbound from app_id {app_id}")
         return {"success": True, "message": "Activation code unbound successfully"}
@@ -90,7 +98,7 @@ async def unbind_activation_code(app_id: str) -> dict:
         return {"success": False, "message": "Failed to unbind activation code"}
 
 async def delete_activation_code(code: str) -> dict:
-    success = await delete_activation_code(code)
+    success = await db_delete_activation_code(code)
     if success:
         logger.debug(f"Activation code {code} deleted")
         return {"success": True, "message": "Activation code deleted successfully"}
